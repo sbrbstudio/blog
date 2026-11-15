@@ -1,0 +1,487 @@
+这是一份针对当前项目的操作手册，不是写给外部读者看的品牌文章。你会在这里找到启动网站、添加或删除文章、编写 Markdown、修改页面、检查 SEO，以及推送到 GitHub 自动发布的完整步骤。
+
+项目目录是 `D:\1work\blog`。下面的路径都从这个目录开始计算。修改文件后，开发服务器通常会自动刷新；如果没有刷新，停止服务器后重新运行即可。
+
+<Figure
+  src="/images/website-editing-workflow.svg"
+  alt="编辑网站的五步流程：内容、文章、Markdown、检查、发布"
+  caption="日常编辑只需要沿着这五步执行，不必每次重新理解整个项目。"
+  width={1200}
+  height={500}
+/>
+
+## 启动与目录
+
+第一次使用项目时，先安装依赖。项目使用 `pnpm`，根目录里已经有 `pnpm-lock.yaml`，不要混用不同包管理器。
+
+```bash
+cd D:\1work\blog
+pnpm install
+pnpm dev
+```
+
+启动成功后，终端会显示本地地址，默认是：
+
+```text
+http://localhost:3000
+```
+
+浏览器打开这个地址就能看到网站。开发服务器运行期间，修改页面、样式或文章通常会自动刷新。要停止服务器，在运行它的终端中按 `Ctrl + C`。
+
+主要文件的位置如下：
+
+| 位置 | 用途 |
+| --- | --- |
+| `src/app/` | 页面、路由、SEO 和全局样式 |
+| `src/components/` | 导航、搜索、文章卡片等复用组件 |
+| `src/content/articles.ts` | 所有文章的标题、摘要、分类、日期和封面路径 |
+| `src/content/posts/` | 每篇文章真正的 MDX 正文 |
+| `public/images/` | 封面图、正文插图和作者头像 |
+| `src/lib/site.ts` | 网站名称、域名、作者和社交链接 |
+| `src/app/globals.css` | 颜色、字体、间距、响应式和全部视觉样式 |
+
+最重要的对应关系只有一条：**`articles.ts` 里的 `slug` 必须与 `src/content/posts/` 里的 MDX 文件名相同。**
+
+例如元数据中写的是：
+
+```ts
+slug: "website-editing-complete-guide"
+```
+
+正文文件就必须是：
+
+```text
+src/content/posts/website-editing-complete-guide.mdx
+```
+
+## 添加文章
+
+添加一篇文章需要同时完成三件事：准备封面、添加元数据、创建 MDX 正文。只做其中一步，文章不会完整出现。
+
+### 第一步：准备封面
+
+把图片放进 `public/images/`。例如文件名是 `new-article.webp`，那么网站里的路径应该写成：
+
+```text
+/images/new-article.webp
+```
+
+路径必须以 `/images/` 开头，不要写 `public`，也不需要写完整的磁盘路径。建议封面使用 16:9 比例，例如 1200 × 675。
+
+### 第二步：添加文章元数据
+
+打开 `src/content/articles.ts`，在 `articles` 数组里新增一项。现有文章后面加一个逗号，然后粘贴类似下面的内容：
+
+```ts
+{
+  title: "我的新文章",
+  slug: "my-new-article",
+  description: "一句话说明这篇文章主要讲什么。",
+  category: "Guide",
+  publishedAt: "2026-11-18",
+  readingTime: 8,
+  coverImage: "/images/new-article.webp",
+  author: author.name,
+},
+```
+
+字段含义：
+
+| 字段 | 说明 |
+| --- | --- |
+| `title` | 页面和文章列表显示的标题 |
+| `slug` | URL 地址，只能使用小写英文、数字和短横线 |
+| `description` | 摘要，也会用于搜索结果和 SEO |
+| `category` | 必须是 `categories` 中已经存在的分类 |
+| `publishedAt` | 发布日期，格式固定为 `YYYY-MM-DD` |
+| `readingTime` | 预计阅读分钟数 |
+| `coverImage` | 从 `/images/` 开始的图片路径 |
+| `author` | 作者名称，当前直接使用 `author.name` |
+
+如果你要创建新的分类，先在同一个文件顶部修改：
+
+```ts
+export const categories = ["Guide", "Notes"] as const;
+```
+
+然后给 `topicDescriptions` 增加对应说明：
+
+```ts
+export const topicDescriptions: Record<Category, string> = {
+  Guide: "当前网站的维护与操作说明。",
+  Notes: "其他笔记和补充内容。",
+};
+```
+
+分类名称会生成 `/topics/分类名` 页面。为了让 URL 稳定，分类名建议使用英文。
+
+### 第三步：创建 MDX 正文
+
+在 `src/content/posts/` 新建文件，文件名必须完全等于文章的 `slug`：
+
+```text
+src/content/posts/my-new-article.mdx
+```
+
+文件中不要再写一级标题 `# 标题`，因为页面会根据元数据自动生成 H1。正文直接从段落和二级标题开始：
+
+```md
+这是文章的导语段落。
+
+## 第一节
+
+这里是第一节的正文。
+
+### 更小的标题
+
+- 第一条内容
+- 第二条内容
+```
+
+保存后，首页、文章列表、文章详情、分类页和 Sitemap 都会读取这条元数据。新文章地址也会自动生成：
+
+```text
+http://localhost:3000/articles/my-new-article
+```
+
+## 删除与修改
+
+### 修改已有文章
+
+按需要修改对应位置：
+
+- 标题、摘要、分类、日期、阅读时间：修改 `src/content/articles.ts`。
+- 正文：修改 `src/content/posts/<slug>.mdx`。
+- 封面：替换 `public/images/` 中的图片，或修改元数据里的 `coverImage`。
+- 作者资料：修改 `src/content/articles.ts` 顶部的 `author`。
+- 网站名称和联系方式：修改 `src/lib/site.ts`。
+
+如果只修改标题或正文，不要顺手改 `slug`。`slug` 决定文章网址，改掉后旧链接会变成 404。
+
+### 删除一篇文章
+
+删除前先确认文章的两个位置：
+
+1. 在 `src/content/articles.ts` 的 `articles` 数组中找到对应对象。
+2. 在 `src/content/posts/` 中找到同名 MDX 文件。
+
+删除步骤：
+
+1. 删除 `articles` 数组中的整个文章对象，包括结尾逗号。
+2. 删除对应的 `.mdx` 文件。
+3. 如果封面不再被其他文章使用，再删除 `public/images/` 中的图片。
+4. 回到网站检查文章列表和旧地址。
+
+只删除 MDX 会导致文章详情构建失败；只删除元数据会留下一个没有入口的正文文件。两处必须一起处理。
+
+如果以后想保留旧链接的访问能力，可以保留正文但把文章从列表隐藏；直接删除会让旧地址返回 404。
+
+## Markdown 语法
+
+正文使用 MDX，普通 Markdown 语法都可以直接使用。页面已经自动生成文章的 H1，所以正文从 `##` 开始。
+
+### 标题
+
+```md
+## 二级标题
+
+### 三级标题
+
+#### 四级标题
+```
+
+建议一篇文章只使用 H2 和 H3。目录会根据这些标题自动生成。
+
+### 粗体、斜体与删除线
+
+```md
+**粗体文字**
+*斜体文字*
+~~删除线文字~~
+```
+
+不要用大量粗体制造层级。标题、间距和段落本身应该承担主要层级。
+
+### 链接
+
+```md
+[OpenAI](https://openai.com)
+
+[回到首页](/)
+```
+
+站外链接会自动在新标签页打开；站内链接使用以 `/` 开头的地址。
+
+### 无序列表和有序列表
+
+```md
+- 第一项
+- 第二项
+  - 子项目
+
+1. 第一步
+2. 第二步
+3. 第三步
+```
+
+### 引用
+
+```md
+> 这是一段引用。
+```
+
+引用使用左侧细线和浅色文字，不要用它代替普通正文。
+
+### 行内代码
+
+```md
+运行 `pnpm dev` 启动网站。
+```
+
+### 代码块
+
+````md
+```ts
+const message = "Hello";
+console.log(message);
+```
+````
+
+代码块支持语法高亮。反引号后面的 `ts`、`js`、`css`、`bash`、`md` 等语言标记可以改写。
+
+### 表格
+
+```md
+| 项目 | 说明 |
+| --- | --- |
+| 启动 | `pnpm dev` |
+| 构建 | `pnpm build` |
+```
+
+### 分隔线
+
+```md
+---
+```
+
+### 普通 Markdown 图片
+
+```md
+![图片说明](/images/example.webp)
+```
+
+方括号中的文字会成为图片的替代文本。图片文件必须放在 `public/images/`。
+
+### 带说明文字的图片
+
+如果图片下面需要显示说明，使用项目提供的 `Figure` 组件：
+
+```mdx
+<Figure
+  src="/images/example.webp"
+  alt="图片内容说明"
+  caption="显示在图片下方的说明文字。"
+  width={1200}
+  height={675}
+/>
+```
+
+`Figure` 已经是项目内置组件，不需要在 MDX 中额外 `import`。
+
+## 修改页面与设计
+
+常用页面都在 `src/app/`：
+
+| 页面 | 文件 |
+| --- | --- |
+| 首页 | `src/app/page.tsx` |
+| 文章列表 | `src/app/articles/page.tsx` |
+| 文章详情 | `src/app/articles/[slug]/page.tsx` |
+| 分类列表 | `src/app/topics/page.tsx` |
+| 单个分类 | `src/app/topics/[slug]/page.tsx` |
+| 关于页面 | `src/app/about/page.tsx` |
+| 404 页面 | `src/app/not-found.tsx` |
+
+导航在 `src/components/site-header.tsx`，页脚在 `src/components/site-footer.tsx`，搜索在 `src/components/search-dialog.tsx`。
+
+常用视觉规则集中在 `src/app/globals.css`。修改颜色时优先改变量，不要在每个组件里单独写颜色：
+
+```css
+:root {
+  --background: #ffffff;
+  --foreground: #191919;
+  --secondary: #777777;
+  --border: #eaeae8;
+  --accent: #3366cc;
+}
+```
+
+深色模式使用同一个变量体系。修改亮色变量后，也要检查对应的 `[data-theme="dark"]` 区域。
+
+## SEO 与 Metadata
+
+文章的 title、description、canonical、Open Graph 和结构化数据都来自 `articles.ts` 中的元数据。只要按格式添加文章，这些内容会自动生成。
+
+站点级信息在 `src/lib/site.ts`：
+
+```ts
+export const siteConfig = {
+  name: "Commonplace",
+  title: "Commonplace — 网站编辑一体化教程",
+  description: "网站说明",
+  url: "https://sbrbstudio.github.io/blog",
+};
+```
+
+GitHub Actions 会在构建时设置线上地址和 `/blog` 子路径：
+
+```text
+NEXT_PUBLIC_SITE_URL=https://sbrbstudio.github.io/blog
+NEXT_PUBLIC_BASE_PATH=/blog
+```
+
+它会用于 Canonical、Open Graph、Sitemap 和 robots.txt。修改 `slug` 前要确认是否有旧链接需要保留。
+
+## GitHub 推送与自动发布
+
+GitHub 仓库地址：
+
+```text
+https://github.com/sbrbstudio/blog
+```
+
+线上网站地址：
+
+```text
+https://sbrbstudio.github.io/blog/
+```
+
+项目使用 `main` 分支。每次把这个分支推送到 GitHub，`.github/workflows/deploy-pages.yml` 都会自动执行依赖安装、Lint、类型检查、静态构建和 GitHub Pages 发布。
+
+本地修改后，在项目目录中运行：
+
+```bash
+cd D:\1work\blog
+
+pnpm dev
+
+# 在浏览器检查并修改网站后
+
+pnpm lint
+pnpm typecheck
+pnpm build
+
+git status
+git add .
+git commit -m "更新网站内容"
+git push
+```
+
+如果只修改了某一篇文章，也可以只提交对应文件：
+
+```bash
+git add src/content/articles.ts
+git add src/content/posts/website-editing-complete-guide.mdx
+git commit -m "更新网站编辑教程"
+git push
+```
+
+推送完成后：
+
+1. 打开仓库的 **Actions** 页面。
+2. 查看 **Deploy to GitHub Pages** 工作流。
+3. 等两个任务都显示绿色勾选。
+4. 打开 `https://sbrbstudio.github.io/blog/` 检查线上版本。
+
+本地 `pnpm dev` 看到的修改不会自动上线。只有执行 `git commit` 和 `git push` 后，GitHub Pages 才会更新。
+
+如果 GitHub 上出现了网页端修改，推送前先同步远程内容：
+
+```bash
+git pull --rebase origin main
+```
+
+如果工作流失败，先在本地运行 `pnpm build`。终端通常会给出具体文件、行号或资源路径。
+
+仓库第一次部署时，需要在 GitHub 的 **Settings → Pages → Build and deployment** 中把 Source 设置为 **GitHub Actions**。当前仓库已经按这个方式配置。
+
+## 发布前检查
+
+编辑过程中使用开发模式：
+
+```bash
+pnpm dev
+```
+
+准备发布时，先运行三项检查：
+
+```bash
+pnpm lint
+pnpm typecheck
+pnpm build
+```
+
+三项都通过后，才能确认项目没有语法、类型或构建错误。要预览本地静态导出：
+
+```bash
+pnpm preview
+```
+
+`pnpm preview` 之前必须先运行 `pnpm build`。如果开发服务器还没停止，先按 `Ctrl + C`。
+
+发布前至少检查：
+
+- 首页和文章列表能看到刚添加的文章。
+- 新文章地址能打开，标题与正文一致。
+- 封面图片存在，没有被裁切或溢出。
+- 旧文章删除后，相关元数据、MDX 和图片都已处理。
+- 搜索、分类筛选、深色模式和移动菜单仍然可用。
+- Sitemap 中只包含真实存在的页面。
+- `lint`、`typecheck`、`build` 全部通过。
+- GitHub Actions 的两个任务都成功完成。
+
+## 常见问题
+
+### 新文章打开是 404
+
+检查三件事：`slug` 与 MDX 文件名是否完全一致；文章对象是否真的放进了 `articles` 数组；开发服务器是否已经重新编译。必要时停止并重新运行 `pnpm dev`。
+
+### 文章出现了，但封面是破图
+
+检查 `coverImage` 是否以 `/images/` 开头，文件名大小写是否一致，扩展名是否正确，以及图片是否真的在 `public/images/` 中。
+
+### 修改后浏览器没有变化
+
+先看终端是否有编译错误。再尝试刷新页面。如果仍然没有变化，停止 `pnpm dev` 后重新启动。
+
+### 3000 端口被占用
+
+换一个端口启动：
+
+```bash
+pnpm exec next dev -p 3001
+```
+
+然后打开 `http://localhost:3001`。
+
+### 删除文章后构建失败
+
+通常是把元数据删除了，但 MDX 还在；或者把 MDX 删除了，但元数据还在。两处必须同步删除。
+
+### Markdown 没有按预期显示
+
+检查标题 `#` 与文字之间是否有空格，列表符号后是否有空格，代码块是否成对使用三个反引号。中文标点不要替换 Markdown 所需的英文符号。
+
+## 日常编辑流程
+
+以后每次编辑都可以按这个顺序：
+
+1. 运行 `pnpm dev`。
+2. 需要新文章时，先准备图片，再更新 `articles.ts`，最后创建同名 `.mdx`。
+3. 在 `http://localhost:3000` 检查页面。
+4. 修改完成后运行 `pnpm lint`、`pnpm typecheck` 和 `pnpm build`。
+5. 构建通过后执行 `pnpm preview` 检查静态版本。
+6. 提交并推送：`git add .`、`git commit -m "更新网站内容"`、`git push`。
+7. 在 GitHub Actions 中等待自动部署完成。
+
+这份手册覆盖了当前项目最常用的编辑操作。只要保持“元数据、MDX 文件、图片路径”三者一致，网站就可以稳定地继续添加和维护内容。
